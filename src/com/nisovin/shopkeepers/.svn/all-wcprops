@@ -1,0 +1,77 @@
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/svn/!svn/ver/1037/trunk/ShopKeepers/src/com/nisovin/shopkeepers
+END
+ShopListener.java
+K 25
+svn:wc:ra_dav:version-url
+V 82
+/svn/!svn/ver/1037/trunk/ShopKeepers/src/com/nisovin/shopkeepers/ShopListener.java
+END
+BlockListener.java
+K 25
+svn:wc:ra_dav:version-url
+V 83
+/svn/!svn/ver/1007/trunk/ShopKeepers/src/com/nisovin/shopkeepers/BlockListener.java
+END
+Settings.java
+K 25
+svn:wc:ra_dav:version-url
+V 78
+/svn/!svn/ver/1035/trunk/ShopKeepers/src/com/nisovin/shopkeepers/Settings.java
+END
+ChestBreakListener.java
+K 25
+svn:wc:ra_dav:version-url
+V 88
+/svn/!svn/ver/1035/trunk/ShopKeepers/src/com/nisovin/shopkeepers/ChestBreakListener.java
+END
+Shopkeeper.java
+K 25
+svn:wc:ra_dav:version-url
+V 80
+/svn/!svn/ver/1015/trunk/ShopKeepers/src/com/nisovin/shopkeepers/Shopkeeper.java
+END
+ShopkeepersPlugin.java
+K 25
+svn:wc:ra_dav:version-url
+V 87
+/svn/!svn/ver/1037/trunk/ShopKeepers/src/com/nisovin/shopkeepers/ShopkeepersPlugin.java
+END
+ShopkeeperType.java
+K 25
+svn:wc:ra_dav:version-url
+V 84
+/svn/!svn/ver/1015/trunk/ShopKeepers/src/com/nisovin/shopkeepers/ShopkeeperType.java
+END
+BlockSpawnListener.java
+K 25
+svn:wc:ra_dav:version-url
+V 87
+/svn/!svn/ver/961/trunk/ShopKeepers/src/com/nisovin/shopkeepers/BlockSpawnListener.java
+END
+VolatileCode.java
+K 25
+svn:wc:ra_dav:version-url
+V 82
+/svn/!svn/ver/1037/trunk/ShopKeepers/src/com/nisovin/shopkeepers/VolatileCode.java
+END
+VillagerListener.java
+K 25
+svn:wc:ra_dav:version-url
+V 86
+/svn/!svn/ver/1015/trunk/ShopKeepers/src/com/nisovin/shopkeepers/VillagerListener.java
+END
+EditorClickResult.java
+K 25
+svn:wc:ra_dav:version-url
+V 86
+/svn/!svn/ver/950/trunk/ShopKeepers/src/com/nisovin/shopkeepers/EditorClickResult.java
+END
+ChestProtectListener.java
+K 25
+svn:wc:ra_dav:version-url
+V 90
+/svn/!svn/ver/1000/trunk/ShopKeepers/src/com/nisovin/shopkeepers/ChestProtectListener.java
+END

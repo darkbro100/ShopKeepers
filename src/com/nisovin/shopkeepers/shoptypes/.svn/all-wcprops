@@ -1,0 +1,47 @@
+K 25
+svn:wc:ra_dav:version-url
+V 74
+/svn/!svn/ver/1015/trunk/ShopKeepers/src/com/nisovin/shopkeepers/shoptypes
+END
+BuyingPlayerShopkeeper.java
+K 25
+svn:wc:ra_dav:version-url
+V 102
+/svn/!svn/ver/1006/trunk/ShopKeepers/src/com/nisovin/shopkeepers/shoptypes/BuyingPlayerShopkeeper.java
+END
+FixedQuantityPlayerShopkeeper.java
+K 25
+svn:wc:ra_dav:version-url
+V 109
+/svn/!svn/ver/1006/trunk/ShopKeepers/src/com/nisovin/shopkeepers/shoptypes/FixedQuantityPlayerShopkeeper.java
+END
+PlayerShopkeeper.java
+K 25
+svn:wc:ra_dav:version-url
+V 96
+/svn/!svn/ver/1006/trunk/ShopKeepers/src/com/nisovin/shopkeepers/shoptypes/PlayerShopkeeper.java
+END
+WrittenBookPlayerShopkeeper.java
+K 25
+svn:wc:ra_dav:version-url
+V 107
+/svn/!svn/ver/1015/trunk/ShopKeepers/src/com/nisovin/shopkeepers/shoptypes/WrittenBookPlayerShopkeeper.java
+END
+TradingPlayerShopkeeper.java
+K 25
+svn:wc:ra_dav:version-url
+V 103
+/svn/!svn/ver/1006/trunk/ShopKeepers/src/com/nisovin/shopkeepers/shoptypes/TradingPlayerShopkeeper.java
+END
+CustomQuantityPlayerShopkeeper.java
+K 25
+svn:wc:ra_dav:version-url
+V 110
+/svn/!svn/ver/1006/trunk/ShopKeepers/src/com/nisovin/shopkeepers/shoptypes/CustomQuantityPlayerShopkeeper.java
+END
+AdminShopkeeper.java
+K 25
+svn:wc:ra_dav:version-url
+V 95
+/svn/!svn/ver/1015/trunk/ShopKeepers/src/com/nisovin/shopkeepers/shoptypes/AdminShopkeeper.java
+END
