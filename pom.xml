@@ -2,7 +2,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.nisovin.shopkeepers</groupId>
     <artifactId>ShopkeepersPlugin</artifactId>
-    <version>1.2</version>
+    <version>1.8</version>
     <name>Shopkeepers</name>
     <url>http://dev.bukkit.org/server-mods/shopkeepers/</url>
     <repositories>
