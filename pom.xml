@@ -7,9 +7,14 @@
     <url>http://dev.bukkit.org/server-mods/shopkeepers/</url>
     <repositories>
         <repository>
+            <id>CNa</id>
+            <url>http://cube-nation.de:8081/nexus/content/groups/public/</url>
+        </repository>
+        <repository>
             <id>bukkit-repo</id>
             <url>http://repo.bukkit.org/content/groups/public</url>
         </repository>
+
     </repositories>
     <build>
         <plugins>
@@ -35,17 +40,19 @@
         <dependency>
             <groupId>org.bukkit</groupId>
             <artifactId>craftbukkit</artifactId>
-            <version>1.4.5-R0.1</version>
+            <version>1.4.6-R0.1</version>
         </dependency>
         <dependency>
         	<groupId>com.sk89q</groupId>
         	<artifactId>worldguard</artifactId>
-        	<version>5.6.6-SNAPSHOT</version>
+        	<version>5.6.6</version>
         </dependency>
-        <dependency>
-        	<groupId>com.palmergames.bukkit.towny</groupId>
-        	<artifactId>Towny</artifactId>
-        	<version>0.82.0.2</version>
-        </dependency>
+<dependency>
+  <groupId>com.palmergames.bukkit.towny</groupId>
+  <artifactId>Towny</artifactId>
+  <version>0.82</version>
+            <scope>system</scope>
+            <systemPath>${basedir}/Towny.jar</systemPath>
+</dependency>
     </dependencies>
 </project>
