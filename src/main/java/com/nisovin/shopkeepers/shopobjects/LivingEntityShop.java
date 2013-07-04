@@ -1,15 +1,17 @@
 package com.nisovin.shopkeepers.shopobjects;
 
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
+import org.bukkit.inventory.ItemStack;
 
+import com.nisovin.shopkeepers.Settings;
 import com.nisovin.shopkeepers.ShopkeepersPlugin;
-import com.nisovin.shopkeepers.VolatileCode;
 
 public abstract class LivingEntityShop extends ShopObject {
 	
@@ -48,8 +50,12 @@ public abstract class LivingEntityShop extends ShopObject {
 			Entity[] entities = loc.getChunk().getEntities();
 			for (Entity e : entities) {
 				if (e.getType() == getEntityType() && e.getUniqueId().toString().equalsIgnoreCase(uuid) && e.isValid()) {
-					entity = (LivingEntity)e;
-					entity.setHealth(entity.getMaxHealth());
+					entity = (LivingEntity)e;					
+					//entity.setHealth(entity.getMaxHealth());
+					String name = shopkeeper.getName();
+					if (name != null && !name.isEmpty()) {
+						setEntityName(name);
+					}
 					entity.teleport(loc);
 					break;
 				}
@@ -59,8 +65,16 @@ public abstract class LivingEntityShop extends ShopObject {
 		if (entity == null || !entity.isValid()) {
 			entity = (LivingEntity)w.spawnEntity(loc, getEntityType());
 			uuid = entity.getUniqueId().toString();
+			String name = shopkeeper.getName();
+			if (name != null && !name.isEmpty() && Settings.showNameplates) {
+				if (Settings.nameplatePrefix != null && !Settings.nameplatePrefix.isEmpty()) {
+					name = ChatColor.translateAlternateColorCodes('&', Settings.nameplatePrefix) + name;
+				}
+				setEntityName(name);
+			}
 		}
 		if (entity != null && entity.isValid()) {
+			entity.setRemoveWhenFarAway(false);
 			overwriteAI();
 			return true;
 		} else {
@@ -95,10 +109,41 @@ public abstract class LivingEntityShop extends ShopObject {
 	}
 	
 	@Override
+	public void setName(String name) {
+		if (entity != null && entity.isValid() && Settings.showNameplates) {
+			if (Settings.nameplatePrefix != null && !Settings.nameplatePrefix.isEmpty()) {
+				name = ChatColor.translateAlternateColorCodes('&', Settings.nameplatePrefix) + name;
+			}
+			if (name.length() > 32) {
+				name = name.substring(0, 32);
+			}
+			setEntityName(name);
+		}
+	}
+	
+	private void setEntityName(String name) {
+		if (name != null && !name.isEmpty()) {
+			entity.setCustomName(name);
+			entity.setCustomNameVisible(Settings.alwaysShowNameplates);
+		} else {
+			entity.setCustomName(null);
+			entity.setCustomNameVisible(false);
+		}
+	}
+	
+	@Override
+	public void setItem(ItemStack item) {
+		if (entity != null && entity.isValid()) {
+			entity.getEquipment().setItemInHand(item);
+			entity.getEquipment().setItemInHandDropChance(0);
+		}
+	}
+	
+	@Override
 	public boolean check(String world, int x, int y, int z) {
 		if (entity == null || !entity.isValid()) {
 			boolean spawned = spawn(world, x, y, z);
-			ShopkeepersPlugin.warning("Shopkeeper (" + world + "," + x + "," + y + "," + z + ") missing, respawn " + (spawned?"successful":"failed"));
+			ShopkeepersPlugin.debug("Shopkeeper (" + world + "," + x + "," + y + "," + z + ") missing, respawn " + (spawned?"successful":"failed"));
 			if (spawned) {
 				respawnAttempts = 0;
 				return true;
@@ -121,7 +166,7 @@ public abstract class LivingEntityShop extends ShopObject {
 	public void despawn() {
 		if (entity != null) {
 			entity.remove();
-			entity.setHealth(0);
+			entity.setHealth(0D);
 			entity = null;
 		}
 	}
@@ -132,7 +177,7 @@ public abstract class LivingEntityShop extends ShopObject {
 	}
 	
 	protected void overwriteAI() {
-		VolatileCode.overwriteLivingEntityAI(entity);
+		ShopkeepersPlugin.getVolatileCode().overwriteLivingEntityAI(entity);
 	}
 	
 }

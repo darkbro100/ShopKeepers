@@ -6,22 +6,29 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
+import org.bukkit.entity.Monster;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.inventory.InventoryAction;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.world.ChunkLoadEvent;
@@ -29,14 +36,21 @@ import org.bukkit.event.world.ChunkUnloadEvent;
 import org.bukkit.event.world.WorldLoadEvent;
 import org.bukkit.event.world.WorldUnloadEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+
+import com.nisovin.shopkeepers.events.ShopkeeperDeletedEvent;
+import com.nisovin.shopkeepers.events.ShopkeeperEditedEvent;
 import com.nisovin.shopkeepers.shoptypes.PlayerShopkeeper;
 
 class ShopListener implements Listener {
 
 	ShopkeepersPlugin plugin;
 	
+	Map<String, Long> lastPurchase;
+	
 	public ShopListener(ShopkeepersPlugin plugin) {
 		this.plugin = plugin;
+		this.lastPurchase = new HashMap<String, Long>();
 	}
 	
 	@EventHandler(priority=EventPriority.MONITOR, ignoreCancelled=true)
@@ -63,7 +77,7 @@ class ShopListener implements Listener {
 			String id = plugin.editing.remove(name);
 			Shopkeeper shopkeeper = plugin.activeShopkeepers.get(id);
 			if (shopkeeper != null) {
-				if (event.getInventory().getTitle().equals(Settings.editorTitle)) {
+				if (plugin.isShopkeeperEditorWindow(event.getInventory())) {
 					shopkeeper.onEditorClose(event);
 					plugin.closeTradingForShopkeeper(id);
 					plugin.save();
@@ -78,10 +92,11 @@ class ShopListener implements Listener {
 	@EventHandler
 	void onInventoryClick(InventoryClickEvent event) {
 		// shopkeeper editor click
-		if (event.getInventory().getTitle().equals(Settings.editorTitle)) {
-			if (plugin.editing.containsKey(event.getWhoClicked().getName())) {
+		if (plugin.isShopkeeperEditorWindow(event.getInventory())) {
+			String playerName = event.getWhoClicked().getName();
+			if (plugin.editing.containsKey(playerName)) {
 				// get the shopkeeper being edited
-				String id = plugin.editing.get(event.getWhoClicked().getName());
+				String id = plugin.editing.get(playerName);
 				Shopkeeper shopkeeper = plugin.activeShopkeepers.get(id);
 				if (shopkeeper != null) {
 					// editor click
@@ -92,18 +107,48 @@ class ShopListener implements Listener {
 						
 						// return egg
 						if (Settings.deletingPlayerShopReturnsEgg && shopkeeper instanceof PlayerShopkeeper) {
-							event.getWhoClicked().getInventory().addItem(new ItemStack(Material.MONSTER_EGG, 1, (short)120));
+							ItemStack creationItem = new ItemStack(Settings.shopCreationItem, 1, (short)Settings.shopCreationItemData);
+							if (Settings.shopCreationItemName != null && !Settings.shopCreationItemName.isEmpty()) {
+								ItemMeta meta = creationItem.getItemMeta();
+								meta.setDisplayName(Settings.shopCreationItemName);
+								creationItem.setItemMeta(meta);
+							}
+							HashMap<Integer, ItemStack> remaining = event.getWhoClicked().getInventory().addItem(creationItem);
+							if (!remaining.isEmpty()) {
+								event.getWhoClicked().getWorld().dropItem(shopkeeper.getActualLocation(), creationItem);
+							}
 						}
 						
 						// remove shopkeeper
 						plugin.activeShopkeepers.remove(id);
 						plugin.allShopkeepersByChunk.get(shopkeeper.getChunk()).remove(shopkeeper);
+						
+						// run event
+						Bukkit.getPluginManager().callEvent(new ShopkeeperDeletedEvent((Player)event.getWhoClicked(), shopkeeper));
+						
+						// save
 						plugin.save();
 					} else if (result == EditorClickResult.DONE_EDITING) {
 						// end the editing session
-						plugin.closeTradingForShopkeeper(id);
+						plugin.closeTradingForShopkeeper(id);						
+						// run event
+						Bukkit.getPluginManager().callEvent(new ShopkeeperEditedEvent((Player)event.getWhoClicked(), shopkeeper));
+						// save
 						plugin.save();
-					} else if (result == EditorClickResult.SAVE_AND_CONTINUE) {
+					} else if (result == EditorClickResult.SAVE_AND_CONTINUE) {						
+						// run event
+						Bukkit.getPluginManager().callEvent(new ShopkeeperEditedEvent((Player)event.getWhoClicked(), shopkeeper));
+						// save
+						plugin.save();
+					} else if (result == EditorClickResult.SET_NAME) {
+						// close editor window and ask for new name
+						plugin.closeInventory((Player)event.getWhoClicked());
+						plugin.editing.remove(event.getWhoClicked().getName());
+						plugin.naming.put(event.getWhoClicked().getName(), id);
+						plugin.sendMessage((Player)event.getWhoClicked(), Settings.msgTypeNewName);						
+						// run event
+						Bukkit.getPluginManager().callEvent(new ShopkeeperEditedEvent((Player)event.getWhoClicked(), shopkeeper));
+						// save
 						plugin.save();
 					}
 				} else {
@@ -115,13 +160,31 @@ class ShopListener implements Listener {
 				plugin.closeInventory(event.getWhoClicked());
 			}
 		}
+		
 		// purchase click
 		if (event.getInventory().getName().equals("mob.villager") && event.getRawSlot() == 2 && plugin.purchasing.containsKey(event.getWhoClicked().getName())) {
+			String playerName = event.getWhoClicked().getName();
+			// prevent unwanted special clicks
+			if (!event.isLeftClick() || event.getAction() == InventoryAction.COLLECT_TO_CURSOR) {
+				event.setCancelled(true);
+				return;
+			}
+			
+			// get shopkeeper
 			String id = plugin.purchasing.get(event.getWhoClicked().getName());
 			Shopkeeper shopkeeper = plugin.activeShopkeepers.get(id);
-			if (shopkeeper != null) {
+			ItemStack item = event.getCurrentItem();
+			if (shopkeeper != null && item != null) {
+				// prevent double-clicks (ugly fix, but necessary to prevent dupes)
+				/*Long last = lastPurchase.remove(playerName);
+				long curr = System.currentTimeMillis();
+				if (last != null && last.longValue() > curr - 500) {
+					event.setCancelled(true);
+					return;
+				}
+				lastPurchase.put(playerName, curr);*/
+				
 				// verify purchase
-				ItemStack item = event.getCurrentItem();
 				ItemStack item1 = event.getInventory().getItem(0);
 				ItemStack item2 = event.getInventory().getItem(1);
 				boolean ok = false;
@@ -133,6 +196,8 @@ class ShopListener implements Listener {
 					}
 				}
 				if (!ok) {
+					ShopkeepersPlugin.debug("Invalid trade by " + event.getWhoClicked().getName() + " with shopkeeper at " + shopkeeper.getPositionString() + ":");
+					ShopkeepersPlugin.debug("  " + itemStackToString(item1) + " and " + itemStackToString(item2) + " for " + itemStackToString(item));
 					event.setCancelled(true);
 					return;
 				}
@@ -150,7 +215,7 @@ class ShopListener implements Listener {
 						if (isNew) writer.append("TIME,PLAYER,SHOP TYPE,SHOP POS,OWNER,ITEM TYPE,DATA,QUANTITY,CURRENCY 1,CURRENCY 2\n");
 						writer.append("\"" + 
 								new SimpleDateFormat("HH:mm:ss").format(new Date()) + "\",\"" + 
-								event.getWhoClicked().getName() + "\",\"" + 
+								playerName + "\",\"" + 
 								shopkeeper.getType().name() + "\",\"" + 
 								shopkeeper.getPositionString() + "\",\"" + 
 								owner + "\",\"" + 
@@ -168,11 +233,81 @@ class ShopListener implements Listener {
 		}
 	}
 	
+	@EventHandler
+	public void onChat(AsyncPlayerChatEvent event) {
+		final Player player = event.getPlayer();
+		final String name = player.getName();
+		if (plugin.naming.containsKey(name)) {
+			event.setCancelled(true);
+			final String message = event.getMessage();
+			Bukkit.getScheduler().scheduleSyncDelayedTask(plugin, new Runnable() {
+				public void run() {
+					String id = plugin.naming.remove(name);
+					Shopkeeper shopkeeper = plugin.activeShopkeepers.get(id);
+					
+					// set name
+					if (message.equals("-")) {
+						shopkeeper.setName("");
+					} else if (message.length() > 32) {
+						shopkeeper.setName(message.substring(0, 32));
+					} else {
+						shopkeeper.setName(message);
+					}
+					plugin.sendMessage(player, Settings.msgNameSet);
+					plugin.closeTradingForShopkeeper(id);
+					
+					// run event
+					Bukkit.getPluginManager().callEvent(new ShopkeeperEditedEvent(player, shopkeeper));
+					
+					// save
+					plugin.save();
+				}
+			});
+		}
+	}
+
+	@EventHandler
+	void onEntityDamage(EntityDamageEvent event) {
+		// don't allow damaging shopkeepers!
+		if (plugin.activeShopkeepers.containsKey("entity" + event.getEntity().getEntityId())) {
+			event.setCancelled(true);
+			if (event instanceof EntityDamageByEntityEvent) {
+				EntityDamageByEntityEvent evt = (EntityDamageByEntityEvent)event;
+				if (evt.getDamager() instanceof Monster) {
+					evt.getDamager().remove();
+				}
+			}
+		}
+	}
+	
 	private boolean itemEquals(ItemStack item1, ItemStack item2) {
 		if ((item1 == null || item1.getTypeId() == 0) && (item2 == null || item2.getTypeId() == 0)) return true;
 		if (item1 == null || item2 == null) return false;
-		return item1.getTypeId() == item2.getTypeId() && item1.getDurability() == item2.getDurability() && VolatileCode.itemNamesEqual(item1, item2);
+		return item1.isSimilar(item2);
+		//return item1.getTypeId() == item2.getTypeId() && item1.getDurability() == item2.getDurability() && itemNamesEqual(item1, item2);
 	}
+
+	private static String getNameOfItem(ItemStack item) {
+		if (item != null && item.getTypeId() > 0 && item.hasItemMeta()) {
+			ItemMeta meta = item.getItemMeta();
+			if (meta.hasDisplayName()) {
+				return meta.getDisplayName();
+			}
+		}
+		return "";
+	}
+	
+	private String itemStackToString(ItemStack item) {
+		if (item == null || item.getTypeId() == 0) return "(nothing)";
+		String name = getNameOfItem(item);
+		return item.getTypeId() + ":" + item.getDurability() + (!name.isEmpty() ? ":" + name : "");
+	}
+
+	/*private static boolean itemNamesEqual(ItemStack item1, ItemStack item2) {
+		String name1 = getNameOfItem(item1);
+		String name2 = getNameOfItem(item2);
+		return (name1.equals(name2));
+	}*/
 
 	@EventHandler(priority=EventPriority.LOW)
 	void onPlayerInteract1(PlayerInteractEvent event) {		
@@ -187,7 +322,7 @@ class ShopListener implements Listener {
 					event.setCancelled(true);
 					return;
 				}
-				for (BlockFace face : plugin.faces) {
+				for (BlockFace face : plugin.chestProtectFaces) {
 					if (block.getRelative(face).getType() == Material.CHEST) {
 						if (plugin.isChestProtected(player, block.getRelative(face))) {
 							event.setCancelled(true);

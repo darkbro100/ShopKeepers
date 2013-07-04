@@ -28,6 +28,10 @@ public abstract class ShopObject {
 	
 	public abstract Location getActualLocation();
 	
+	public abstract void setName(String name);
+	
+	public abstract void setItem(ItemStack item);
+	
 	public abstract boolean check(String world, int x, int y, int z);
 	
 	public abstract void despawn();
@@ -45,6 +49,8 @@ public abstract class ShopObject {
 				return new VillagerShop();				
 			} else if (obj.equals("block")) {
 				return new BlockShop();
+			} else if (obj.equals("witch")) {
+				return new WitchShop();
 			}
 		}
 		return new VillagerShop();
