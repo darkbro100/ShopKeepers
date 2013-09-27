@@ -49,6 +49,11 @@ public class CreateListener implements Listener {
 			}
 		}
 		
+		// prevent regular usage
+		if (Settings.preventShopCreationItemRegularUsage && !player.isOp() && !player.hasPermission("shopkeeper.bypass")) {
+			event.setCancelled(true);
+		}
+		
 		// check for player shop spawn
 		String playerName = player.getName();
 		if (event.getAction() == Action.RIGHT_CLICK_AIR) {
@@ -64,6 +69,8 @@ public class CreateListener implements Listener {
 						plugin.sendMessage(player, Settings.msgSelectedSignShop);
 					} else if (shopObjectType == ShopObjectType.WITCH) {
 						plugin.sendMessage(player, Settings.msgSelectedWitchShop);
+					} else if (shopObjectType == ShopObjectType.CREEPER) {
+						plugin.sendMessage(player, Settings.msgSelectedCreeperShop);
 					}
 				}
 			} else {

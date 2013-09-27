@@ -35,6 +35,9 @@ import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.permissions.Permission;
+import org.bukkit.permissions.PermissionDefault;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -57,6 +60,7 @@ public class ShopkeepersPlugin extends JavaPlugin {
 	Map<String, String> editing = new HashMap<String, String>();
 	Map<String, String> naming = Collections.synchronizedMap(new HashMap<String, String>());
 	Map<String, String> purchasing = new HashMap<String, String>();
+	Map<String, String> hiring = new HashMap<String, String>();
 	Map<String, List<String>> recentlyPlacedChests = new HashMap<String, List<String>>();
 	Map<String, ShopkeeperType> selectedShopType = new HashMap<String, ShopkeeperType>();
 	Map<String, ShopObjectType> selectedShopObjectType = new HashMap<String, ShopObjectType>();
@@ -74,23 +78,22 @@ public class ShopkeepersPlugin extends JavaPlugin {
 				
 		// load volatile code handler
 		try {
-			Class.forName("net.minecraft.server.v1_6_R1.MinecraftServer");
-			volatileCodeHandle = new VolatileCode_1_6_R1();
-		} catch (ClassNotFoundException e_1_6_r1) {
+			Class.forName("net.minecraft.server.v1_6_R2.MinecraftServer");
+			volatileCodeHandle = new VolatileCode_1_6_R3();
+		} catch (ClassNotFoundException e_1_6_r2) {
 			try {
-				volatileCodeHandle = new VolatileCode_Unknown();
-			} catch (Exception e_u) {
+				Class.forName("net.minecraft.server.v1_6_R1.MinecraftServer");
+				volatileCodeHandle = new VolatileCode_1_6_R3();
+			} catch (ClassNotFoundException e_1_6_r1) {
+				try {
+					volatileCodeHandle = new VolatileCode_Unknown();
+					getLogger().warning("Potentially incompatible server version: Shopkeepers is running in 'compatibility mode'.");
+				} catch (Exception e_u) {
+				}
 			}
-				//try {
-				//	Class.forName("net.minecraft.server.MinecraftServer");
-				//	if (getServer().getVersion().contains("1.5")) {
-				//		volatileCodeHandle = new VolatileCode_1_5_Z();
-				//	}
-				//} catch (ClassNotFoundException e_1_5_null) {
-				//}
 		}
 		if (volatileCodeHandle == null) {
-			getLogger().severe("Incompatible server version: Shopkeepers plugin cannot be enabled.");
+			getLogger().severe("Incompatible server version: Shopkeepers cannot be enabled.");
 			this.setEnabled(false);
 			return;
 		}
@@ -131,6 +134,14 @@ public class ShopkeepersPlugin extends JavaPlugin {
 			}
 		}
 		
+		// process additional perms
+		String[] perms = Settings.maxShopsPermOptions.replace(" ", "").split(",");
+		for (String perm : perms) {
+			if (Bukkit.getPluginManager().getPermission("shopkeeper.maxshops." + perm) == null) {
+				Bukkit.getPluginManager().addPermission(new Permission("shopkeeper.maxshops." + perm, PermissionDefault.FALSE));
+			}
+		}
+		
 		// register events
 		PluginManager pm = getServer().getPluginManager();
 		pm.registerEvents(new ShopListener(this), this);
@@ -144,12 +155,16 @@ public class ShopkeepersPlugin extends JavaPlugin {
 		if (Settings.enableWitchShops) {
 			pm.registerEvents(new WitchListener(this), this);
 		}
+		if (Settings.enableCreeperShops) {
+			pm.registerEvents(new CreeperListener(this), this);
+		}
 		if (Settings.blockVillagerSpawns) {
 			pm.registerEvents(new BlockSpawnListener(), this);
 		}
 		if (Settings.protectChests) {
 			pm.registerEvents(new ChestProtectListener(this), this);
-		} else if (Settings.deleteShopkeeperOnBreakChest) {
+		}
+		if (Settings.deleteShopkeeperOnBreakChest) {
 			pm.registerEvents(new ChestBreakListener(this), this);
 		}
 		
@@ -289,9 +304,73 @@ public class ShopkeepersPlugin extends JavaPlugin {
 			
 		} else if (sender instanceof Player) {
 			Player player = (Player)sender;
+			Block block = player.getTargetBlock(null, 10);
+			
+			// transfer ownership
+			if (args.length == 2 && args[0].equalsIgnoreCase("transfer") && player.hasPermission("shopkeeper.transfer")) {
+				Player newOwner = Bukkit.getPlayer(args[1]);
+				if (newOwner == null) {
+					sender.sendMessage("No player found");
+					return true;
+				}
+				if (block.getType() != Material.CHEST) {
+					sender.sendMessage("Must target chest");
+					return true;
+				}
+				List<PlayerShopkeeper> shopkeepers = getShopkeeperOwnersOfChest(block);
+				if (shopkeepers.size() == 0) {
+					sender.sendMessage("No shopkeepers use that chest");
+					return true;
+				}
+				if (!player.isOp() && !player.hasPermission("shopkeeper.bypass")) {
+					for (PlayerShopkeeper shopkeeper : shopkeepers) {
+						if (!shopkeeper.getOwner().equalsIgnoreCase(player.getName())) {
+							sender.sendMessage("Not your shopkeeper");
+							return true;
+						}
+					}
+				}
+				for (PlayerShopkeeper shopkeeper : shopkeepers) {
+					shopkeeper.setOwner(newOwner.getName());
+				}
+				save();
+				sender.sendMessage("New owner set to " + newOwner.getName());
+				return true;
+			}
+			
+			// set for hire
+			if (args.length == 1 && args[0].equalsIgnoreCase("setforhire") && player.hasPermission("shopkeeper.setforhire")) {
+				if (block.getType() != Material.CHEST) {
+					sender.sendMessage("Must target chest");
+					return true;
+				}
+				List<PlayerShopkeeper> shopkeepers = getShopkeeperOwnersOfChest(block);
+				if (shopkeepers.size() == 0) {
+					sender.sendMessage("No shopkeepers use that chest");
+					return true;
+				}
+				if (!player.isOp() && !player.hasPermission("shopkeeper.bypass")) {
+					for (PlayerShopkeeper shopkeeper : shopkeepers) {
+						if (!shopkeeper.getOwner().equalsIgnoreCase(player.getName())) {
+							sender.sendMessage("Not your shopkeeper");
+							return true;
+						}
+					}
+				}
+				ItemStack hireCost = player.getItemInHand();
+				if (hireCost == null || hireCost.getType() == Material.AIR || hireCost.getAmount() == 0) {
+					sender.sendMessage("Must hold hire cost in hand");
+					return true;
+				}
+				for (PlayerShopkeeper shopkeeper : shopkeepers) {
+					shopkeeper.setForHire(true, hireCost.clone());
+				}
+				save();
+				sender.sendMessage("Shopkeeper set for hire");
+				return true;
+			}
 						
 			// get the spawn location for the shopkeeper
-			Block block = player.getTargetBlock(null, 10);
 			if (block != null && block.getType() != Material.AIR) {
 				if (Settings.createPlayerShopWithCommand && block.getType() == Material.CHEST) {
 					// check if already a chest
@@ -363,6 +442,8 @@ public class ShopkeepersPlugin extends JavaPlugin {
 							loc = block.getLocation();
 						} else if (args[0].equals("witch")) {
 							shopObjType = ShopObjectType.WITCH;
+						} else if (args[0].equals("creeper")) {
+							shopObjType = ShopObjectType.CREEPER;
 						}
 					}
 					Shopkeeper shopkeeper = createNewAdminShopkeeper(loc, shopObjType.createObject());
@@ -432,6 +513,12 @@ public class ShopkeepersPlugin extends JavaPlugin {
 		}
 		
 		int maxShops = Settings.maxShopsPerPlayer;
+		String[] maxShopsPermOptions = Settings.maxShopsPermOptions.replace(" ", "").split(",");
+		for (String perm : maxShopsPermOptions) {
+			if (player.hasPermission("shopkeeper.maxshops." + perm)) {
+				maxShops = Integer.parseInt(perm);
+			}
+		}
 		
 		// call event
 		CreatePlayerShopkeeperEvent event = new CreatePlayerShopkeeperEvent(player, chest, location, shopType, maxShops);
@@ -517,6 +604,10 @@ public class ShopkeepersPlugin extends JavaPlugin {
 	public boolean isShopkeeperEditorWindow(Inventory inventory) {
 		return inventory.getTitle().equals(Settings.editorTitle);
 	}
+	
+	public boolean isShopkeeperHireWindow(Inventory inventory) {
+		return inventory.getTitle().equals(Settings.forHireTitle);
+	}
 
 	void addShopkeeper(Shopkeeper shopkeeper) {
 		// add to chunk list
@@ -554,23 +645,29 @@ public class ShopkeepersPlugin extends JavaPlugin {
 			boolean isEditing = shopkeeper.onEdit(player);
 			if (isEditing) {
 				ShopkeepersPlugin.debug("  Editor window opened");
-				plugin.editing.put(player.getName(), shopkeeper.getId());
+				editing.put(player.getName(), shopkeeper.getId());
 			} else {
 				ShopkeepersPlugin.debug("  Editor window NOT opened");
 			}
 		} else if (shopkeeper != null) {
-			// trading with shopkeeper
-			ShopkeepersPlugin.debug("  Opening trade window...");
-			OpenTradeEvent evt = new OpenTradeEvent(player, shopkeeper);
-			Bukkit.getPluginManager().callEvent(evt);
-			if (evt.isCancelled()) {
-				ShopkeepersPlugin.debug("  Trade cancelled by another plugin");
-				return;
+			if (shopkeeper instanceof PlayerShopkeeper && ((PlayerShopkeeper)shopkeeper).isForHire() && player.hasPermission("shopkeeper.hire")) {
+				// show hire interface
+				openHireWindow((PlayerShopkeeper)shopkeeper, player);
+				hiring.put(player.getName(), shopkeeper.getId());
+			} else {
+				// trading with shopkeeper
+				ShopkeepersPlugin.debug("  Opening trade window...");
+				OpenTradeEvent evt = new OpenTradeEvent(player, shopkeeper);
+				Bukkit.getPluginManager().callEvent(evt);
+				if (evt.isCancelled()) {
+					ShopkeepersPlugin.debug("  Trade cancelled by another plugin");
+					return;
+				}
+				// open trade window
+				openTradeWindow(shopkeeper, player);
+				purchasing.put(player.getName(), shopkeeper.getId());
+				ShopkeepersPlugin.debug("  Trade window opened");
 			}
-			// open trade window
-			plugin.openTradeWindow(shopkeeper, player);
-			plugin.purchasing.put(player.getName(), shopkeeper.getId());
-			ShopkeepersPlugin.debug("  Trade window opened");
 		}
 	}
 	
@@ -599,6 +696,17 @@ public class ShopkeepersPlugin extends JavaPlugin {
 						}
 					}
 				}
+				Iterator<String> hirers = hiring.keySet().iterator();
+				while (hirers.hasNext()) {
+					String name = hirers.next();
+					if (hiring.get(name).equals(id)) {
+						hirers.remove();
+						Player player = Bukkit.getPlayerExact(name);
+						if (player != null) {
+							player.closeInventory();
+						}
+					}
+				}
 			}
 		}, 1);
 	}
@@ -615,6 +723,23 @@ public class ShopkeepersPlugin extends JavaPlugin {
 		return volatileCodeHandle.openTradeWindow(shopkeeper, player);
 	}
 	
+	void openHireWindow(PlayerShopkeeper shopkeeper, Player player) {
+		Inventory inv = Bukkit.createInventory(player, 9, ChatColor.translateAlternateColorCodes('&', Settings.forHireTitle));
+		
+		ItemStack item = new ItemStack(Settings.hireItem, 0);
+		ItemMeta meta = item.getItemMeta();
+		meta.setDisplayName(ChatColor.translateAlternateColorCodes('&', Settings.msgButtonHire));
+		item.setItemMeta(meta);
+		inv.setItem(2, item);
+		inv.setItem(6, item);
+		
+		ItemStack hireCost = shopkeeper.getHireCost();
+		if (hireCost == null) return;
+		inv.setItem(4, hireCost);
+		
+		player.openInventory(inv);
+	}
+	
 	boolean isChestProtected(Player player, Block block) {
 		for (Shopkeeper shopkeeper : activeShopkeepers.values()) {
 			if (shopkeeper instanceof PlayerShopkeeper) {
@@ -627,16 +752,17 @@ public class ShopkeepersPlugin extends JavaPlugin {
 		return false;
 	}
 	
-	Shopkeeper getShopkeeperOwnerOfChest(Block block) {
+	List<PlayerShopkeeper> getShopkeeperOwnersOfChest(Block block) {
+		List<PlayerShopkeeper> owners = new ArrayList<PlayerShopkeeper>();
 		for (Shopkeeper shopkeeper : activeShopkeepers.values()) {
 			if (shopkeeper instanceof PlayerShopkeeper) {
 				PlayerShopkeeper pshop = (PlayerShopkeeper)shopkeeper;
 				if (pshop.usesChest(block)) {
-					return pshop;
+					owners.add(pshop);
 				}
 			}
 		}
-		return null;
+		return owners;
 	}
 	
 	void sendMessage(Player player, String message) {

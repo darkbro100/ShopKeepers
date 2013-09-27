@@ -3,11 +3,11 @@ package com.nisovin.shopkeepers.volatilecode;
 import java.lang.reflect.Field;
 import java.util.List;
 
-import net.minecraft.server.v1_6_R1.*;
+import net.minecraft.server.v1_6_R3.*;
 
-import org.bukkit.craftbukkit.v1_6_R1.entity.CraftLivingEntity;
-import org.bukkit.craftbukkit.v1_6_R1.entity.CraftPlayer;
-import org.bukkit.craftbukkit.v1_6_R1.entity.CraftVillager;
+import org.bukkit.craftbukkit.v1_6_R3.entity.CraftLivingEntity;
+import org.bukkit.craftbukkit.v1_6_R3.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_6_R3.entity.CraftVillager;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Villager;
@@ -15,15 +15,13 @@ import org.bukkit.inventory.ItemStack;
 
 import com.nisovin.shopkeepers.Shopkeeper;
 
-public class VolatileCode_1_6_R1 implements VolatileCodeHandle {
+public class VolatileCode_1_6_R3 implements VolatileCodeHandle {
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public boolean openTradeWindow(Shopkeeper shopkeeper, Player player) {
-
+	public boolean openTradeWindow(String name, List<ItemStack[]> recipes, Player player) {
 		try {
 			EntityVillager villager = new EntityVillager(((CraftPlayer)player).getHandle().world, 0);
-			String name = shopkeeper.getName();
 			if (name != null && !name.isEmpty()) {
 				villager.setCustomName(name);
 			}
@@ -36,7 +34,7 @@ public class VolatileCode_1_6_R1 implements VolatileCodeHandle {
 				recipeListField.set(villager, recipeList);
 			}
 			recipeList.clear();
-			for (ItemStack[] recipe : shopkeeper.getRecipes()) {
+			for (ItemStack[] recipe : recipes) {
 				recipeList.add(createMerchantRecipe(recipe[0], recipe[1], recipe[2]));
 			}
 			
@@ -47,6 +45,11 @@ public class VolatileCode_1_6_R1 implements VolatileCodeHandle {
 			e.printStackTrace();
 			return false;
 		}
+	}
+	
+	@Override
+	public boolean openTradeWindow(Shopkeeper shopkeeper, Player player) {
+		return openTradeWindow(shopkeeper.getName(), shopkeeper.getRecipes(), player);
 	}
 	
 	@SuppressWarnings("rawtypes")
@@ -118,9 +121,9 @@ public class VolatileCode_1_6_R1 implements VolatileCodeHandle {
 		return recipe;
 	}
 	
-	private net.minecraft.server.v1_6_R1.ItemStack convertItemStack(org.bukkit.inventory.ItemStack item) {
+	private net.minecraft.server.v1_6_R3.ItemStack convertItemStack(org.bukkit.inventory.ItemStack item) {
 		if (item == null) return null;
-		return org.bukkit.craftbukkit.v1_6_R1.inventory.CraftItemStack.asNMSCopy(item);
+		return org.bukkit.craftbukkit.v1_6_R3.inventory.CraftItemStack.asNMSCopy(item);
 	}
 
 	

@@ -1,10 +1,10 @@
 package com.nisovin.shopkeepers.shoptypes;
 
+import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
-import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.Inventory;
@@ -27,6 +27,8 @@ public abstract class PlayerShopkeeper extends Shopkeeper {
 	protected int chestx;
 	protected int chesty;
 	protected int chestz;
+	protected boolean forHire;
+	protected ItemStack hireCost;
 	
 	public PlayerShopkeeper(ConfigurationSection config) {
 		super(config);
@@ -38,6 +40,7 @@ public abstract class PlayerShopkeeper extends Shopkeeper {
 		this.chestx = chest.getX();
 		this.chesty = chest.getY();
 		this.chestz = chest.getZ();
+		this.forHire = false;
 	}
 	
 	@Override
@@ -47,6 +50,8 @@ public abstract class PlayerShopkeeper extends Shopkeeper {
 		chestx = config.getInt("chestx");
 		chesty = config.getInt("chesty");
 		chestz = config.getInt("chestz");
+		forHire = config.getBoolean("forhire");
+		hireCost = config.getItemStack("hirecost");
 	}
 	
 	@Override
@@ -57,6 +62,8 @@ public abstract class PlayerShopkeeper extends Shopkeeper {
 		config.set("chestx", chestx);
 		config.set("chesty", chesty);
 		config.set("chestz", chestz);
+		config.set("forhire", forHire);
+		config.set("hirecost", hireCost);
 	}
 	
 	/**
@@ -65,6 +72,32 @@ public abstract class PlayerShopkeeper extends Shopkeeper {
 	 */
 	public String getOwner() {
 		return owner;
+	}
+	
+	/**
+	 * Sets the owner of this shop.
+	 * @param owner the owner player name
+	 */
+	public void setOwner(String owner) {
+		this.owner = owner;
+	}
+	
+	public boolean isForHire() {
+		return forHire;
+	}
+	
+	public void setForHire(boolean forHire, ItemStack hireCost) {
+		this.forHire = forHire;
+		this.hireCost = hireCost;
+		if (forHire) {
+			setName(ChatColor.translateAlternateColorCodes('&', Settings.forHireTitle));
+		} else {
+			setName(null);
+		}
+	}
+	
+	public ItemStack getHireCost() {
+		return hireCost;
 	}
 	
 	/**
@@ -124,19 +157,7 @@ public abstract class PlayerShopkeeper extends Shopkeeper {
 			if (item != null) {
 				if (item.getTypeId() == Settings.currencyItem) {
 					int amount = item.getAmount();
-					if (event.isShiftClick() && event.isLeftClick()) {
-						amount += 10;
-					} else if (event.isShiftClick() && event.isRightClick()) {
-						amount -= 10;
-					} else if (event.isLeftClick()) {
-						amount += 1;
-					} else if (event.isRightClick()) {
-						amount -= 1;
-					} else if (event.isShiftClick() && event.getClick() == ClickType.MIDDLE) {
-						amount = 64;
-					} else if (event.getClick() == ClickType.MIDDLE) {
-						amount = 1;
-					}
+					amount = getNewAmountAfterEditorClick(amount, event);
 					if (amount > 64) amount = 64;
 					if (amount <= 0) {
 						item.setTypeId(Settings.zeroItem);
@@ -159,19 +180,7 @@ public abstract class PlayerShopkeeper extends Shopkeeper {
 			if (item != null && Settings.highCurrencyItem > 0) {
 				if (item.getTypeId() == Settings.highCurrencyItem) {
 					int amount = item.getAmount();
-					if (event.isShiftClick() && event.isLeftClick()) {
-						amount += 10;
-					} else if (event.isShiftClick() && event.isRightClick()) {
-						amount -= 10;
-					} else if (event.isLeftClick()) {
-						amount += 1;
-					} else if (event.isRightClick()) {
-						amount -= 1;
-					} else if (event.isShiftClick() && event.getClick() == ClickType.MIDDLE) {
-						amount = 64;
-					} else if (event.getClick() == ClickType.MIDDLE) {
-						amount = 1;
-					}
+					amount = getNewAmountAfterEditorClick(amount, event);
 					if (amount > 64) amount = 64;
 					if (amount <= 0) {
 						item.setTypeId(Settings.highZeroItem);

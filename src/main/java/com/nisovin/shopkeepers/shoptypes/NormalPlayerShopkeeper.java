@@ -13,7 +13,6 @@ import org.bukkit.block.Block;
 import org.bukkit.block.Chest;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
-import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
@@ -146,25 +145,7 @@ public class NormalPlayerShopkeeper extends PlayerShopkeeper {
 			ItemStack item = event.getCurrentItem();
 			if (item != null && item.getTypeId() != 0) {
 				int amt = item.getAmount();
-				if (event.isLeftClick()) {
-					if (event.isShiftClick()) {
-						amt += 10;
-					} else {
-						amt += 1;
-					}
-				} else if (event.isRightClick()) {
-					if (event.isShiftClick()) {
-						amt -= 10;
-					} else {
-						amt -= 1;
-					}
-				} else if (event.getClick() == ClickType.MIDDLE) {
-					if (event.isShiftClick()) {
-						amt = item.getMaxStackSize();
-					} else {
-						amt = 1;
-					}
-				}
+				amt = getNewAmountAfterEditorClick(amt, event);
 				if (amt <= 0) amt = 1;
 				if (amt > item.getMaxStackSize()) amt = item.getMaxStackSize();
 				item.setAmount(amt);
@@ -227,28 +208,31 @@ public class NormalPlayerShopkeeper extends PlayerShopkeeper {
 		}
 		
 		// add earnings to chest
-		if (Settings.highCurrencyItem <= 0 || cost.cost <= Settings.highCurrencyMinCost) {
-			boolean added = addToInventory(new ItemStack(Settings.currencyItem, cost.cost, Settings.currencyItemData), contents);
-			if (!added) {
-				event.setCancelled(true);
-				return;
-			}
-		} else {
-			int highCost = cost.cost / Settings.highCurrencyValue;
-			int lowCost = cost.cost % Settings.highCurrencyValue;
-			boolean added = false;
-			if (highCost > 0) {
-				added = addToInventory(new ItemStack(Settings.highCurrencyItem, highCost, Settings.highCurrencyItemData), contents);
+		int amount = getAmountAfterTaxes(cost.cost);
+		if (amount > 0) {
+			if (Settings.highCurrencyItem <= 0 || cost.cost <= Settings.highCurrencyMinCost) {
+				boolean added = addToInventory(new ItemStack(Settings.currencyItem, amount, Settings.currencyItemData), contents);
 				if (!added) {
 					event.setCancelled(true);
 					return;
 				}
-			}
-			if (lowCost > 0) {
-				added = addToInventory(new ItemStack(Settings.currencyItem, lowCost, Settings.currencyItemData), contents);
-				if (!added) {
-					event.setCancelled(true);
-					return;
+			} else {
+				int highCost = amount / Settings.highCurrencyValue;
+				int lowCost = amount % Settings.highCurrencyValue;
+				boolean added = false;
+				if (highCost > 0) {
+					added = addToInventory(new ItemStack(Settings.highCurrencyItem, highCost, Settings.highCurrencyItemData), contents);
+					if (!added) {
+						event.setCancelled(true);
+						return;
+					}
+				}
+				if (lowCost > 0) {
+					added = addToInventory(new ItemStack(Settings.currencyItem, lowCost, Settings.currencyItemData), contents);
+					if (!added) {
+						event.setCancelled(true);
+						return;
+					}
 				}
 			}
 		}

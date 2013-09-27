@@ -8,6 +8,7 @@ import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
+import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.Inventory;
@@ -244,6 +245,27 @@ public abstract class Shopkeeper {
 		ShopkeepersPlugin.plugin.closeInventory(player);
 	}
 	
+	protected int getNewAmountAfterEditorClick(int amount, InventoryClickEvent event) {
+		if (event.isLeftClick()) {
+			if (event.isShiftClick()) {
+				amount += 10;
+			} else {
+				amount += 1;
+			}
+		} else if (event.isRightClick()) {
+			if (event.isShiftClick()) {
+				amount -= 10;
+			} else {
+				amount -= 1;
+			}
+		} else if (event.getClick() == ClickType.MIDDLE) {
+			amount = 64;
+		} else if (event.getHotbarButton() >= 0) {
+			amount = event.getHotbarButton();
+		}
+		return amount;
+	}
+	
 	protected void setActionButtons(Inventory inv) {
 		inv.setItem(8, createItemStackWithName(Settings.nameItem, Settings.msgButtonName));
 		ItemStack typeItem = shopObject.getTypeItem();
@@ -266,5 +288,16 @@ public abstract class Shopkeeper {
 		meta.setDisplayName(ChatColor.translateAlternateColorCodes('&', name));
 		item.setItemMeta(meta);
 		return item;
+	}
+	
+	protected int getAmountAfterTaxes(int amount) {
+		if (Settings.taxRate == 0) return amount;
+		int taxes = 0;
+		if (Settings.taxRoundUp) {
+			taxes = (int)Math.ceil((double)amount * (Settings.taxRate/100F));
+		} else {
+			taxes = (int)Math.floor((double)amount * (Settings.taxRate/100F));
+		}
+		return amount - taxes;
 	}
 }

@@ -1,5 +1,5 @@
 name: Shopkeepers
-version: 1.14.1
+version: 1.15.1
 description: Custom villager shopkeepers
 author: nisovin
 website: http://dev.bukkit.org/server-mods/shopkeepers/
@@ -20,6 +20,15 @@ permissions:
         default: op
     shopkeeper.purchase:
         description: Purchase items from any shopkeeper
+        default: true
+    shopkeeper.transfer:
+        description: Transfer ownership of a shopkeeper
+        default: op
+    shopkeeper.setforhire:
+        description: Set a shopkeeper to be for hire
+        default: op
+    shopkeeper.hire:
+        description: Hire a shopkeeper
         default: true
         
     shopkeeper.admin:
@@ -54,4 +63,7 @@ permissions:
         default: true
     shopkeeper.witch:
         description: Create a witch shopkeeper
+        default: true
+    shopkeeper.creeper:
+        description: Create a creeper shopkeeper
         default: true
