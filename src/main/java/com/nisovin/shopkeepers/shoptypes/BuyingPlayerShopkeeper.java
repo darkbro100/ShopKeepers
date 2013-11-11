@@ -49,8 +49,8 @@ public class BuyingPlayerShopkeeper extends PlayerShopkeeper {
 					item = new ItemStack(itemSection.getInt("id"), 1, (short)itemSection.getInt("data"));
 				}
 				Cost cost = new Cost();
-				cost.amount = itemSection.getInt("amount");
-				cost.cost = itemSection.getInt("cost");
+				cost.setAmount(itemSection.getInt("amount"));
+				cost.setCost(itemSection.getInt("cost"));
 				costs.put(item, cost);
 			}
 		}

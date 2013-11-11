@@ -77,21 +77,16 @@ public class ShopkeepersPlugin extends JavaPlugin {
 		plugin = this;
 				
 		// load volatile code handler
-		try {
-			Class.forName("net.minecraft.server.v1_6_R2.MinecraftServer");
-			volatileCodeHandle = new VolatileCode_1_6_R3();
-		} catch (ClassNotFoundException e_1_6_r2) {
-			try {
-				Class.forName("net.minecraft.server.v1_6_R1.MinecraftServer");
-				volatileCodeHandle = new VolatileCode_1_6_R3();
-			} catch (ClassNotFoundException e_1_6_r1) {
-				try {
-					volatileCodeHandle = new VolatileCode_Unknown();
-					getLogger().warning("Potentially incompatible server version: Shopkeepers is running in 'compatibility mode'.");
-				} catch (Exception e_u) {
-				}
-			}
-		}
+        try {
+            Class.forName("net.minecraft.server.v1_6_R3.MinecraftServer");
+            volatileCodeHandle = new VolatileCode_1_6_R3();
+        } catch (ClassNotFoundException e_1_6_r3) {
+            try {
+                volatileCodeHandle = new VolatileCode_Unknown();
+                getLogger().warning("Potentially incompatible server version: Shopkeepers is running in 'compatibility mode'.");
+            } catch (Exception e_u) {
+            }
+        }
 		if (volatileCodeHandle == null) {
 			getLogger().severe("Incompatible server version: Shopkeepers cannot be enabled.");
 			this.setEnabled(false);

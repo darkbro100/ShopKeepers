@@ -8,7 +8,7 @@
     <repositories>
         <repository>
             <id>CNa</id>
-            <url>http://cube-nation.de:8081/nexus/content/groups/public/</url>
+            <url>http://nexus.cube-nation.de//content/groups/public/</url>
         </repository>
         <repository>
             <id>bukkit-repo</id>
@@ -47,12 +47,12 @@
         	<artifactId>worldguard</artifactId>
         	<version>5.6.6</version>
         </dependency>
-<dependency>
-  <groupId>com.palmergames.bukkit.towny</groupId>
-  <artifactId>Towny</artifactId>
-  <version>0.82</version>
+        <dependency>
+            <groupId>com.palmergames.bukkit.towny</groupId>
+            <artifactId>Towny</artifactId>
+            <version>0.82</version>
             <scope>system</scope>
             <systemPath>${basedir}/Towny.jar</systemPath>
-</dependency>
+        </dependency>
     </dependencies>
 </project>
